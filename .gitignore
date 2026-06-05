@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# TypeScript build artifacts (emitted by `tsc -b` composite build)
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.log
