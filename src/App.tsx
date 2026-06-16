@@ -14,6 +14,7 @@ import AddListing from './pages/AddListing'
 import Inspections from './pages/Inspections'
 import Wallet from './pages/Wallet'
 import Loans from './pages/Loans'
+import Vendors from './pages/Vendors'
 import Admin from './pages/Admin'
 
 import Login from './pages/auth/Login'
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/listing/:id" element={<ListingDetail />} />
+        <Route path="/vendors" element={<Vendors />} />
         <Route path="/auth/verify" element={<RequireAuth><Verify /></RequireAuth>} />
         <Route path="/saved" element={<RequireAuth><Saved /></RequireAuth>} />
         <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />

@@ -3,12 +3,14 @@ import { persist } from 'zustand/middleware'
 import type {
   User, Property, Thread, Message, Inspection, EscrowTransaction, RentLoan,
   AppNotification, FraudReport, SavedListing, Role, SearchFilters,
+  Review, Subscription, Vendor, PlanTier,
 } from '@/types'
 import {
   seedUsers, seedProperties, seedThreads, seedMessages, seedInspections,
   seedEscrow, seedLoans, seedNotifications, seedFraudReports, seedSaved,
+  seedReviews, seedSubscriptions, seedVendors,
 } from '@/data/mockData'
-import { uid } from './utils'
+import { uid, planByTier } from './utils'
 import { detectDuplicate, FRAUD_FLAG_THRESHOLD } from './fraud'
 
 interface StoreState {
@@ -23,6 +25,9 @@ interface StoreState {
   loans: RentLoan[]
   notifications: AppNotification[]
   fraudReports: FraudReport[]
+  reviews: Review[]
+  subscriptions: Subscription[]
+  vendors: Vendor[]
   // session
   currentUserId: string | null
   filters: SearchFilters
@@ -46,6 +51,21 @@ interface StoreState {
   setFilters: (patch: Partial<SearchFilters>) => void
   toggleSaved: (propertyId: string) => void
   isSaved: (propertyId: string) => boolean
+
+  // subscriptions & wallet top-up
+  activeSubscription: (userId?: string) => Subscription | null
+  remainingListings: (userId?: string) => number
+  subscribePlan: (tier: PlanTier) => { ok: boolean; error?: string }
+  topUpWallet: (amount: number) => void
+
+  // reviews
+  addReview: (data: { subjectId: string; propertyId?: string; rating: number; comment: string }) => { ok: boolean; error?: string }
+  deleteReview: (id: string) => void
+  reviewsFor: (subjectId: string) => Review[]
+  ratingFor: (subjectId: string) => { avg: number; count: number }
+
+  // vendors
+  registerVendor: (data: Omit<Vendor, 'id' | 'verified' | 'rating' | 'jobsCompleted' | 'createdAt' | 'userId'>) => string
 
   // messaging
   getOrCreateThread: (otherUserId: string, propertyId?: string) => string
@@ -95,6 +115,9 @@ export const useStore = create<StoreState>()(
       loans: seedLoans,
       notifications: seedNotifications,
       fraudReports: seedFraudReports,
+      reviews: seedReviews,
+      subscriptions: seedSubscriptions,
+      vendors: seedVendors,
       currentUserId: null,
       filters: { query: '', verifiedOnly: false, propertyType: 'any', furnishing: 'any', ownerType: 'any' },
 
@@ -145,7 +168,14 @@ export const useStore = create<StoreState>()(
           candidate.status = 'flagged'
           candidate.duplicateOf = dup.matchedPropertyId
         }
-        set((s) => ({ properties: [candidate, ...s.properties] }))
+        // Consume one slot from the lister's active subscription.
+        const sub = get().activeSubscription(candidate.ownerId)
+        set((s) => ({
+          properties: [candidate, ...s.properties],
+          subscriptions: sub
+            ? s.subscriptions.map((x) => (x.id === sub.id ? { ...x, listingsUsed: x.listingsUsed + 1 } : x))
+            : s.subscriptions,
+        }))
         if (flagged) {
           set((s) => ({
             fraudReports: [
@@ -179,6 +209,93 @@ export const useStore = create<StoreState>()(
       isSaved: (propertyId) => {
         const uidc = get().currentUserId
         return !!uidc && get().saved.some((x) => x.userId === uidc && x.propertyId === propertyId)
+      },
+
+      // --- subscriptions & wallet -------------------------------------------
+      activeSubscription: (userId) => {
+        const id = userId ?? get().currentUserId
+        if (!id) return null
+        const now = Date.now()
+        return (
+          get().subscriptions
+            .filter((s) => s.userId === id && new Date(s.expiresAt).getTime() > now)
+            .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0] || null
+        )
+      },
+
+      remainingListings: (userId) => {
+        const sub = get().activeSubscription(userId)
+        return sub ? Math.max(0, sub.listingQuota - sub.listingsUsed) : 0
+      },
+
+      subscribePlan: (tier) => {
+        const me = get().currentUser()
+        if (!me) return { ok: false, error: 'Please sign in.' }
+        const plan = planByTier(tier)
+        if (me.walletBalance < plan.price)
+          return { ok: false, error: `Insufficient wallet balance. Top up ₦${(plan.price - me.walletBalance).toLocaleString()} to subscribe to ${plan.name}.` }
+        const now = new Date()
+        const expires = new Date(now.getTime() + plan.durationDays * 86400000)
+        // Carry over any unused slots from a still-active plan.
+        const existing = get().activeSubscription(me.id)
+        const carryOver = existing ? Math.max(0, existing.listingQuota - existing.listingsUsed) : 0
+        const sub: Subscription = {
+          id: uid('sub'), userId: me.id, tier, price: plan.price,
+          listingQuota: plan.listingQuota + carryOver, listingsUsed: 0,
+          startedAt: now.toISOString(), expiresAt: expires.toISOString(),
+        }
+        set((s) => ({
+          subscriptions: [sub, ...s.subscriptions.filter((x) => x.id !== existing?.id)],
+          users: s.users.map((u) => (u.id === me.id ? { ...u, walletBalance: u.walletBalance - plan.price } : u)),
+        }))
+        get().notify(me.id, { type: 'system', title: `${plan.name} plan active`, body: `You can now publish ${plan.listingQuota >= 999 ? 'unlimited' : sub.listingQuota} listing(s). Plan renews on ${expires.toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}.` })
+        return { ok: true }
+      },
+
+      topUpWallet: (amount) =>
+        set((s) => ({ users: s.users.map((u) => (u.id === s.currentUserId ? { ...u, walletBalance: u.walletBalance + amount } : u)) })),
+
+      // --- reviews -----------------------------------------------------------
+      addReview: ({ subjectId, propertyId, rating, comment }) => {
+        const me = get().currentUser()
+        if (!me) return { ok: false, error: 'Please sign in to leave a review.' }
+        if (me.id === subjectId) return { ok: false, error: 'You cannot review yourself.' }
+        if (rating < 1 || rating > 5) return { ok: false, error: 'Please pick a star rating.' }
+        if (get().reviews.some((r) => r.authorId === me.id && r.subjectId === subjectId))
+          return { ok: false, error: 'You have already reviewed this person. Delete your review to write a new one.' }
+        const verifiedInteraction =
+          get().inspections.some((i) => i.tenantId === me.id && i.hostId === subjectId) ||
+          get().escrow.some((e) => e.tenantId === me.id && e.landlordId === subjectId)
+        const review: Review = {
+          id: uid('rv'), subjectId, authorId: me.id, propertyId, rating,
+          comment: comment.trim(), verifiedInteraction, createdAt: new Date().toISOString(),
+        }
+        set((s) => ({ reviews: [review, ...s.reviews] }))
+        get().notify(subjectId, { type: 'system', title: 'New review received', body: `${me.name} rated you ${rating}★${comment.trim() ? `: “${comment.trim().slice(0, 60)}”` : ''}.` })
+        return { ok: true }
+      },
+
+      deleteReview: (id) => set((s) => ({ reviews: s.reviews.filter((r) => r.id !== id) })),
+
+      reviewsFor: (subjectId) =>
+        get().reviews.filter((r) => r.subjectId === subjectId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+
+      ratingFor: (subjectId) => {
+        const rs = get().reviews.filter((r) => r.subjectId === subjectId)
+        if (!rs.length) return { avg: 0, count: 0 }
+        return { avg: rs.reduce((s, r) => s + r.rating, 0) / rs.length, count: rs.length }
+      },
+
+      // --- vendors -----------------------------------------------------------
+      registerVendor: (data) => {
+        const me = get().currentUser()
+        const vendor: Vendor = {
+          ...data, id: uid('v'), userId: me?.id, verified: false,
+          rating: 0, jobsCompleted: 0, createdAt: new Date().toISOString(),
+        }
+        set((s) => ({ vendors: [vendor, ...s.vendors] }))
+        if (me) get().notify(me.id, { type: 'system', title: 'Vendor profile submitted', body: `Your ${data.category} profile is live. We’ll verify your details within 48h.` })
+        return vendor.id
       },
 
       // --- messaging ---------------------------------------------------------
@@ -348,6 +465,7 @@ export const useStore = create<StoreState>()(
         users: s.users, properties: s.properties, saved: s.saved, threads: s.threads,
         messages: s.messages, inspections: s.inspections, escrow: s.escrow, loans: s.loans,
         notifications: s.notifications, fraudReports: s.fraudReports, currentUserId: s.currentUserId,
+        reviews: s.reviews, subscriptions: s.subscriptions, vendors: s.vendors,
       }),
     },
   ),

@@ -1,4 +1,4 @@
-import type { Property, User, BadgeType } from '@/types'
+import type { Property, User, BadgeType, ListingPlan, VendorCategory } from '@/types'
 
 /** Format a NGN amount, e.g. 2500000 -> "₦2,500,000". */
 export function formatNaira(amount: number, opts: { short?: boolean } = {}): string {
@@ -77,6 +77,51 @@ export const AMENITIES = [
   'Estate / Gated',
   'Generator',
 ]
+
+// ----------------------------------------------------------------------------
+// Listing subscription plans. Each grants a quota of published listings for the
+// billing period. "Agency" is effectively unlimited for the demo.
+// ----------------------------------------------------------------------------
+export const LISTING_PLANS: ListingPlan[] = [
+  {
+    tier: 'starter', name: 'Starter', price: 5_000, listingQuota: 3, durationDays: 30,
+    perks: ['Up to 3 active listings', 'Field verification included', 'Standard placement'],
+  },
+  {
+    tier: 'pro', name: 'Pro', price: 12_000, listingQuota: 10, durationDays: 30, popular: true,
+    perks: ['Up to 10 active listings', 'Priority field verification', 'Boosted search placement', 'Featured eligibility'],
+  },
+  {
+    tier: 'agency', name: 'Agency', price: 30_000, listingQuota: 999, durationDays: 30,
+    perks: ['Unlimited listings', 'Same-day verification', 'Top search placement', 'Dedicated account support'],
+  },
+]
+
+export function planByTier(tier: ListingPlan['tier']): ListingPlan {
+  return LISTING_PLANS.find((p) => p.tier === tier) || LISTING_PLANS[0]
+}
+
+export const VENDOR_CATEGORY_LABEL: Record<VendorCategory, string> = {
+  painter: 'Painter',
+  bricklayer: 'Bricklayer',
+  carpenter: 'Carpenter',
+  plumber: 'Plumber',
+  electrician: 'Electrician',
+  tiler: 'Tiler',
+  ac_technician: 'AC Technician',
+  cleaner: 'Cleaner',
+}
+
+export const VENDOR_CATEGORY_EMOJI: Record<VendorCategory, string> = {
+  painter: '🎨',
+  bricklayer: '🧱',
+  carpenter: '🪚',
+  plumber: '🔧',
+  electrician: '💡',
+  tiler: '🪟',
+  ac_technician: '❄️',
+  cleaner: '🧹',
+}
 
 export function uid(prefix = 'id'): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}${Date.now().toString(36).slice(-4)}`

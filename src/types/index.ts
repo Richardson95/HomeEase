@@ -199,6 +199,79 @@ export interface FraudReport {
   createdAt: string
 }
 
+// ----------------------------------------------------------------------------
+// Reviews — a tenant rates a landlord/agent they have dealt with.
+// ----------------------------------------------------------------------------
+export interface Review {
+  id: string
+  subjectId: string // User.id of the landlord/agent being reviewed
+  authorId: string // User.id of the tenant who wrote it
+  propertyId?: string // optional listing the experience relates to
+  rating: number // 1–5 stars
+  comment: string
+  verifiedInteraction: boolean // author had an inspection/escrow with subject
+  createdAt: string
+}
+
+// ----------------------------------------------------------------------------
+// Listing subscriptions — landlords/agents buy a plan that grants a quota of
+// listings. Each published listing consumes one slot from the active plan.
+// ----------------------------------------------------------------------------
+export type PlanTier = 'starter' | 'pro' | 'agency'
+
+export interface ListingPlan {
+  tier: PlanTier
+  name: string
+  price: number // NGN, one-time for the period
+  listingQuota: number // listings granted (use a large number for "unlimited")
+  durationDays: number
+  perks: string[]
+  popular?: boolean
+}
+
+export interface Subscription {
+  id: string
+  userId: string
+  tier: PlanTier
+  listingQuota: number
+  listingsUsed: number
+  price: number
+  startedAt: string
+  expiresAt: string
+}
+
+// ----------------------------------------------------------------------------
+// Vendors — verified maintenance workers (painters, carpenters, plumbers…).
+// ----------------------------------------------------------------------------
+export type VendorCategory =
+  | 'painter'
+  | 'bricklayer'
+  | 'carpenter'
+  | 'plumber'
+  | 'electrician'
+  | 'tiler'
+  | 'ac_technician'
+  | 'cleaner'
+
+export interface Vendor {
+  id: string
+  userId?: string // set when an app user registers as a vendor
+  name: string
+  category: VendorCategory
+  phone: string
+  whatsapp?: string
+  location: string // area
+  lga: string
+  bio: string
+  yearsExperience: number
+  ratePerDay?: number // NGN/day, optional
+  avatarUrl?: string
+  verified: boolean
+  rating: number // 0–5
+  jobsCompleted: number
+  createdAt: string
+}
+
 // Filters used by the Search page
 export interface SearchFilters {
   query: string

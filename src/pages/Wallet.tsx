@@ -17,6 +17,8 @@ const STATUS_META: Record<EscrowStatus, { label: string; tone: string; dot: stri
 export default function Wallet() {
   const user = useStore((s) => s.currentUser())!
   const escrow = useStore((s) => s.escrow)
+  const topUpWallet = useStore((s) => s.topUpWallet)
+  const toast = useToast()
 
   const mine = escrow.filter((e) => e.tenantId === user.id || e.landlordId === user.id)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -33,7 +35,12 @@ export default function Wallet() {
         <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-brand-600/30 blur-3xl" />
         <div className="relative flex items-center gap-2 text-white/70"><WalletIcon className="h-5 w-5" /><span className="text-sm font-medium">{isLandlord ? 'Available balance' : 'In escrow (held)'}</span></div>
         <p className="relative mt-1 text-4xl font-extrabold tracking-tight">{formatNaira(isLandlord ? user.walletBalance : held)}</p>
-        <p className="relative mt-1 text-sm text-white/60">{isLandlord ? 'Released funds ready for withdrawal' : 'Released only after you confirm move-in'}</p>
+        <p className="relative mt-1 text-sm text-white/60">{isLandlord ? 'Released funds & balance for listing plans' : 'Released only after you confirm move-in'}</p>
+        {isLandlord && (
+          <button onClick={() => { topUpWallet(20000); toast('₦20,000 added to wallet (demo)') }} className="relative mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-white/25">
+            + Add funds
+          </button>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">

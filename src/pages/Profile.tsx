@@ -1,24 +1,32 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '@/lib/store'
 import { useToast } from '@/components/Toast'
 import { Avatar } from '@/components/Avatar'
 import { VerifiedBadge } from '@/components/Badge'
-import { PageHeader } from '@/components/common'
+import { PageHeader, SectionTitle } from '@/components/common'
+import { PlanPicker } from '@/components/PlanPicker'
+import { RatingSummary, ReviewList } from '@/components/Reviews'
 import {
   ShieldCheck, CalendarIcon, WalletIcon, TrendingIcon, HeartIcon, HomeIcon,
-  UsersIcon, ChevronRight, LogoutIcon, StarIcon, PlusIcon,
+  UsersIcon, ChevronRight, LogoutIcon, StarIcon, PlusIcon, CheckIcon,
 } from '@/components/icons'
-import { canList, classNames } from '@/lib/utils'
+import { canList, classNames, planByTier, formatNaira } from '@/lib/utils'
 import type { ReactNode } from 'react'
 
 export default function Profile() {
   const user = useStore((s) => s.currentUser())!
   const logout = useStore((s) => s.logout)
   const myListings = useStore((s) => s.properties.filter((p) => p.ownerId === user.id))
+  const activeSub = useStore((s) => s.activeSubscription(user.id))
+  const remaining = useStore((s) => s.remainingListings(user.id))
+  const reviewCount = useStore((s) => s.ratingFor(user.id).count)
   const navigate = useNavigate()
   const toast = useToast()
 
+  const [showPlans, setShowPlans] = useState(false)
   const verified = user.verificationLevel === 'fully_verified'
+  const isOwner = user.role === 'landlord' || user.role === 'agent'
 
   return (
     <div className="container-app">
@@ -49,8 +57,30 @@ export default function Profile() {
         </Link>
       )}
 
+      {/* Owner: listing subscription */}
+      {isOwner && canList(user) && (
+        <div className="mt-4 card p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-slate-900">Listing plan</h3>
+            <button onClick={() => setShowPlans((v) => !v)} className="text-sm font-semibold text-brand-700">{showPlans ? 'Hide plans' : activeSub ? 'Upgrade / renew' : 'View plans'}</button>
+          </div>
+          {activeSub ? (
+            <div className="mt-2 flex items-center gap-3 rounded-xl bg-brand-50 p-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-600 text-white"><CheckIcon className="h-6 w-6" /></span>
+              <div className="flex-1">
+                <p className="font-semibold text-brand-900">{planByTier(activeSub.tier).name} · {remaining >= 999 ? 'Unlimited' : remaining} listing{remaining !== 1 ? 's' : ''} left</p>
+                <p className="text-xs text-brand-700">Renews {new Date(activeSub.expiresAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })} · wallet {formatNaira(user.walletBalance)}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-slate-500">No active plan. Subscribe to publish listings.</p>
+          )}
+          {showPlans && <div className="mt-4"><PlanPicker onSubscribed={() => setShowPlans(false)} /></div>}
+        </div>
+      )}
+
       {/* Owner: my listings summary */}
-      {(user.role === 'landlord' || user.role === 'agent') && (
+      {isOwner && (
         <div className="mt-4 card p-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-slate-900">My listings ({myListings.length})</h3>
@@ -78,8 +108,18 @@ export default function Profile() {
         <MenuItem Icon={WalletIcon} label="Escrow wallet" to="/wallet" />
         <MenuItem Icon={TrendingIcon} label="Rent Assurance (loans)" to="/loans" />
         <MenuItem Icon={HeartIcon} label="Saved listings" to="/saved" />
+        <MenuItem Icon={UsersIcon} label="Maintenance & Vendors" to="/vendors" />
         {user.role === 'admin' && <MenuItem Icon={UsersIcon} label="Admin dashboard" to="/admin" highlight />}
       </div>
+
+      {/* Owner: reviews received from tenants */}
+      {isOwner && reviewCount > 0 && (
+        <div className="mt-6">
+          <SectionTitle>My reviews</SectionTitle>
+          <div className="mb-4 card p-4"><RatingSummary subjectId={user.id} /></div>
+          <ReviewList subjectId={user.id} />
+        </div>
+      )}
 
       <button onClick={() => { logout(); toast('Signed out'); navigate('/') }} className="btn-secondary mt-4 w-full text-red-600">
         <LogoutIcon className="h-5 w-5" /> Sign out

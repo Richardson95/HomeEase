@@ -86,6 +86,19 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Maintenance & vendors promo */}
+      <section className="container-wide">
+        <Link to="/vendors" className="group flex items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-r from-ink-900 to-brand-700 p-5 text-white shadow-card transition hover:shadow-glow sm:p-6">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl backdrop-blur sm:h-14 sm:w-14">🛠️</span>
+          <div className="flex-1">
+            <p className="text-base font-extrabold tracking-tight sm:text-lg">Need repairs or maintenance?</p>
+            <p className="mt-0.5 text-sm text-white/70">Find vetted painters, plumbers, carpenters &amp; more — contact them directly.</p>
+          </div>
+          <span className="hidden shrink-0 rounded-xl bg-white px-4 py-2 text-sm font-bold text-ink-900 transition group-hover:scale-105 sm:block">Browse vendors</span>
+          <span className="text-white/80 sm:hidden">→</span>
+        </Link>
+      </section>
+
       {/* Verification nudge */}
       {user && user.verificationLevel === 'unverified' && (
         <section className="container-wide">

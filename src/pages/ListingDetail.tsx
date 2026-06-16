@@ -5,10 +5,11 @@ import { useToast } from '@/components/Toast'
 import { Avatar } from '@/components/Avatar'
 import { VerifiedBadge, VerifiedPropertyTag, FeaturedTag } from '@/components/Badge'
 import { BookInspectionModal } from './BookInspectionModal'
-import { PageHeader, EmptyState } from '@/components/common'
+import { PageHeader, EmptyState, SectionTitle } from '@/components/common'
+import { RatingSummary, RatingPill, ReviewList, ReviewModal } from '@/components/Reviews'
 import {
   BedIcon, BathIcon, PinIcon, HeartIcon, ShieldCheck, ChatIcon, CalendarIcon,
-  WalletIcon, CheckIcon, ChevronLeft, ChevronRight, StarIcon,
+  WalletIcon, CheckIcon, ChevronLeft, ChevronRight,
 } from '@/components/icons'
 import { formatNaira, PROPERTY_TYPE_LABEL, FURNISHING_LABEL, classNames, canTransact } from '@/lib/utils'
 
@@ -26,6 +27,7 @@ export default function ListingDetail() {
 
   const [imgIdx, setImgIdx] = useState(0)
   const [bookOpen, setBookOpen] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
 
   if (!property || !owner) {
     return <div className="container-app"><EmptyState title="Listing not found" body="This property may have been removed." action={<Link to="/search" className="btn-primary">Back to search</Link>} /></div>
@@ -125,10 +127,25 @@ export default function ListingDetail() {
                 <p className="font-semibold text-slate-800">{owner.name}</p>
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                   {owner.badges.map((b) => <VerifiedBadge key={b} type={b} size="xs" />)}
-                  <span className="chip bg-amber-50 text-amber-700"><StarIcon className="h-3 w-3" />{(owner.trustScore / 20).toFixed(1)}</span>
+                  <RatingPill subjectId={owner.id} />
                 </div>
               </div>
               <button onClick={startChat} className="btn-secondary"><ChatIcon className="h-4 w-4" /> Chat</button>
+            </div>
+
+            {/* Reviews of the landlord/agent */}
+            <div className="mt-6">
+              <SectionTitle
+                action={
+                  user && user.role === 'tenant' && user.id !== owner.id
+                    ? <button onClick={() => setReviewOpen(true)} className="text-sm font-semibold text-brand-700">Write a review</button>
+                    : undefined
+                }
+              >
+                Reviews for {property.ownerType === 'agent' ? 'this agent' : 'this landlord'}
+              </SectionTitle>
+              <div className="mb-4 card p-4"><RatingSummary subjectId={owner.id} /></div>
+              <ReviewList subjectId={owner.id} emptyHint="No reviews yet — book an inspection and share your experience afterwards." />
             </div>
           </div>
         </div>
@@ -154,6 +171,7 @@ export default function ListingDetail() {
       </div>
 
       {bookOpen && <BookInspectionModal propertyId={property.id} onClose={() => setBookOpen(false)} />}
+      {reviewOpen && <ReviewModal subjectId={owner.id} subjectName={owner.name} propertyId={property.id} onClose={() => setReviewOpen(false)} />}
     </div>
   )
 }

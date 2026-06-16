@@ -1,6 +1,7 @@
 import type {
   User, Property, Thread, Message, Inspection, EscrowTransaction,
   RentLoan, AppNotification, FraudReport, SavedListing,
+  Review, Subscription, Vendor,
 } from '@/types'
 
 const img = (id: string) =>
@@ -19,22 +20,36 @@ export const seedUsers: User[] = [
     id: 'u_ade', name: 'Mr. Ade Johnson', email: 'ade@homeease.ng', phone: '+2348023456789',
     role: 'landlord', verificationLevel: 'fully_verified',
     kyc: { emailVerified: true, phoneVerified: true, bvnNinVerified: true, selfieVerified: true, roleDocsVerified: true },
-    trustScore: 94, badges: ['verified_landlord', 'trusted'], walletBalance: 0,
+    trustScore: 94, badges: ['verified_landlord', 'trusted'], walletBalance: 45000,
     createdAt: '2025-11-02T09:00:00Z',
   },
   {
     id: 'u_emeka', name: 'Emeka Obi', email: 'emeka@homeease.ng', phone: '+2348034567890',
     role: 'agent', verificationLevel: 'fully_verified',
     kyc: { emailVerified: true, phoneVerified: true, bvnNinVerified: true, selfieVerified: true, roleDocsVerified: true },
-    trustScore: 90, badges: ['verified_agent', 'trusted'], walletBalance: 0,
+    trustScore: 90, badges: ['verified_agent', 'trusted'], walletBalance: 60000,
     createdAt: '2025-12-20T09:00:00Z',
   },
   {
     id: 'u_chidi', name: 'Chidi Nwosu', email: 'chidi@homeease.ng', phone: '+2348045678901',
     role: 'agent', verificationLevel: 'kyc',
     kyc: { emailVerified: true, phoneVerified: true, bvnNinVerified: true, selfieVerified: false, roleDocsVerified: true },
-    trustScore: 71, badges: ['verified_agent'], walletBalance: 0,
+    trustScore: 71, badges: ['verified_agent'], walletBalance: 18000,
     createdAt: '2026-02-01T09:00:00Z',
+  },
+  {
+    id: 'u_funke', name: 'Funke Adeyemi', email: 'funke@homeease.ng', phone: '+2348056789012',
+    role: 'tenant', verificationLevel: 'fully_verified',
+    kyc: { emailVerified: true, phoneVerified: true, bvnNinVerified: true, selfieVerified: true, roleDocsVerified: false },
+    trustScore: 82, badges: ['verified_user'], walletBalance: 0,
+    createdAt: '2026-03-10T09:00:00Z',
+  },
+  {
+    id: 'u_segun', name: 'Segun Okoro', email: 'segun@homeease.ng', phone: '+2348067890123',
+    role: 'tenant', verificationLevel: 'kyc',
+    kyc: { emailVerified: true, phoneVerified: true, bvnNinVerified: true, selfieVerified: false, roleDocsVerified: false },
+    trustScore: 74, badges: ['verified_user'], walletBalance: 0,
+    createdAt: '2026-04-05T09:00:00Z',
   },
   {
     id: 'u_admin', name: 'HomeEase Admin', email: 'admin@homeease.ng', phone: '+2348000000000',
@@ -202,6 +217,34 @@ export const seedFraudReports: FraudReport[] = [
     id: 'f1', propertyId: 'p_lekki_dupe', reason: 'Duplicate of verified listing (photos + description match)',
     fraudScore: 86, matchedPropertyId: 'p_lekki_3bed', status: 'open', createdAt: '2026-06-04T10:05:00Z',
   },
+]
+
+// --- Reviews (tenants rating landlords/agents) ------------------------------
+export const seedReviews: Review[] = [
+  { id: 'rv1', subjectId: 'u_ade', authorId: 'u_tunde', propertyId: 'p_lekki_3bed', rating: 5, comment: 'Mr. Ade was honest and transparent throughout. The flat was exactly as listed — no surprises. Highly recommend.', verifiedInteraction: true, createdAt: '2026-06-10T10:00:00Z' },
+  { id: 'rv2', subjectId: 'u_ade', authorId: 'u_funke', rating: 4, comment: 'Responsive landlord, handled my repair request quickly. Service charge a little high but fair overall.', verifiedInteraction: false, createdAt: '2026-05-28T10:00:00Z' },
+  { id: 'rv3', subjectId: 'u_ade', authorId: 'u_segun', rating: 5, comment: 'Smooth move-in, escrow released without any drama. Trustworthy.', verifiedInteraction: false, createdAt: '2026-04-30T10:00:00Z' },
+  { id: 'rv4', subjectId: 'u_emeka', authorId: 'u_tunde', propertyId: 'p_ikoyi_duplex', rating: 4, comment: 'Professional agent, showed up on time for the inspection and answered every question. Agency fee was steep.', verifiedInteraction: true, createdAt: '2026-06-06T10:00:00Z' },
+  { id: 'rv5', subjectId: 'u_emeka', authorId: 'u_funke', rating: 5, comment: 'Best agent I have dealt with in Lekki. No runaround, no fake listings.', verifiedInteraction: false, createdAt: '2026-05-15T10:00:00Z' },
+]
+
+// --- Listing subscriptions --------------------------------------------------
+export const seedSubscriptions: Subscription[] = [
+  { id: 'sub_ade', userId: 'u_ade', tier: 'pro', listingQuota: 10, listingsUsed: 2, price: 12000, startedAt: '2026-06-01T09:00:00Z', expiresAt: '2026-07-01T09:00:00Z' },
+  { id: 'sub_emeka', userId: 'u_emeka', tier: 'pro', listingQuota: 10, listingsUsed: 2, price: 12000, startedAt: '2026-06-02T09:00:00Z', expiresAt: '2026-07-02T09:00:00Z' },
+  { id: 'sub_chidi', userId: 'u_chidi', tier: 'starter', listingQuota: 3, listingsUsed: 3, price: 5000, startedAt: '2026-06-03T09:00:00Z', expiresAt: '2026-07-03T09:00:00Z' },
+]
+
+// --- Vendors (maintenance directory) ----------------------------------------
+export const seedVendors: Vendor[] = [
+  { id: 'v_paint1', name: 'Bola Painting Works', category: 'painter', phone: '+2348101111111', whatsapp: '+2348101111111', location: 'Lekki Phase 1', lga: 'Eti-Osa', bio: 'Premium interior & exterior painting, screeding and POP finishing. 12 years across Lagos estates.', yearsExperience: 12, ratePerDay: 15000, verified: true, rating: 4.8, jobsCompleted: 134, createdAt: '2026-01-10T09:00:00Z' },
+  { id: 'v_carp1', name: 'Emmanuel Carpentry', category: 'carpenter', phone: '+2348102222222', whatsapp: '+2348102222222', location: 'Yaba', lga: 'Lagos Mainland', bio: 'Custom wardrobes, kitchen cabinets, doors and furniture repair. Free measurement visit.', yearsExperience: 9, ratePerDay: 18000, verified: true, rating: 4.7, jobsCompleted: 98, createdAt: '2026-01-15T09:00:00Z' },
+  { id: 'v_plumb1', name: 'FlowFix Plumbing', category: 'plumber', phone: '+2348103333333', whatsapp: '+2348103333333', location: 'Surulere', lga: 'Surulere', bio: 'Leak detection, water heater installs, soak-away and overhead tank plumbing. Emergency callouts.', yearsExperience: 7, ratePerDay: 12000, verified: true, rating: 4.6, jobsCompleted: 76, createdAt: '2026-02-01T09:00:00Z' },
+  { id: 'v_elec1', name: 'Voltaire Electricals', category: 'electrician', phone: '+2348104444444', whatsapp: '+2348104444444', location: 'Ikeja GRA', lga: 'Ikeja', bio: 'Certified electrician — wiring, DB upgrades, inverter & solar installation, fault tracing.', yearsExperience: 11, ratePerDay: 16000, verified: true, rating: 4.9, jobsCompleted: 152, createdAt: '2025-12-05T09:00:00Z' },
+  { id: 'v_brick1', name: 'Solid Blocks Masonry', category: 'bricklayer', phone: '+2348105555555', location: 'Ajah', lga: 'Eti-Osa', bio: 'Block-laying, plastering, fence and minor structural works. Team of 4 available.', yearsExperience: 15, ratePerDay: 14000, verified: false, rating: 4.4, jobsCompleted: 61, createdAt: '2026-03-12T09:00:00Z' },
+  { id: 'v_tile1', name: 'Precision Tiling', category: 'tiler', phone: '+2348106666666', whatsapp: '+2348106666666', location: 'Gbagada', lga: 'Kosofe', bio: 'Floor & wall tiling, marble, granite worktops. Clean edges guaranteed.', yearsExperience: 8, ratePerDay: 15000, verified: true, rating: 4.7, jobsCompleted: 89, createdAt: '2026-02-20T09:00:00Z' },
+  { id: 'v_ac1', name: 'CoolBreeze AC Services', category: 'ac_technician', phone: '+2348107777777', whatsapp: '+2348107777777', location: 'Victoria Island', lga: 'Eti-Osa', bio: 'Split & central AC installation, servicing and gas refill. Same-day service on the Island.', yearsExperience: 6, ratePerDay: 13000, verified: true, rating: 4.5, jobsCompleted: 67, createdAt: '2026-03-01T09:00:00Z' },
+  { id: 'v_clean1', name: 'SparkleHome Cleaners', category: 'cleaner', phone: '+2348108888888', whatsapp: '+2348108888888', location: 'Lekki Phase 2', lga: 'Eti-Osa', bio: 'Post-construction cleaning, fumigation and deep move-in cleaning. Uniformed, background-checked team.', yearsExperience: 5, ratePerDay: 20000, verified: true, rating: 4.8, jobsCompleted: 110, createdAt: '2026-01-25T09:00:00Z' },
 ]
 
 // Demo accounts surfaced on the login screen for quick role switching.

@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '@/lib/store'
 import { useToast } from '@/components/Toast'
 import { PageHeader } from '@/components/common'
+import { PlanPicker } from '@/components/PlanPicker'
 import { ShieldCheck, CheckIcon, AlertIcon, CameraIcon } from '@/components/icons'
-import { AMENITIES, LAGOS_AREAS, PROPERTY_TYPE_LABEL, canList, classNames, formatNaira } from '@/lib/utils'
+import { AMENITIES, LAGOS_AREAS, PROPERTY_TYPE_LABEL, canList, classNames, formatNaira, planByTier } from '@/lib/utils'
 import type { PropertyType, FurnishingStatus } from '@/types'
 
 // Curated stock images the lister can pick from (stands in for an upload widget).
@@ -19,6 +20,8 @@ const TYPES: PropertyType[] = ['self_contain', 'mini_flat', '2_bedroom', '3_bedr
 export default function AddListing() {
   const user = useStore((s) => s.currentUser())!
   const addProperty = useStore((s) => s.addProperty)
+  const activeSub = useStore((s) => s.activeSubscription(user.id))
+  const remaining = useStore((s) => s.remainingListings(user.id))
   const toast = useToast()
   const navigate = useNavigate()
 
@@ -41,6 +44,19 @@ export default function AddListing() {
           <p className="mt-1 text-sm text-slate-500">Only verified landlords and agents can list properties. Complete KYC and ownership/license verification to continue.</p>
           <Link to="/auth/verify" className="btn-primary mt-4 inline-flex">Verify my account</Link>
         </div>
+      </div>
+    )
+  }
+
+  // Verified, but needs an active plan with an available listing slot.
+  if (remaining <= 0) {
+    return (
+      <div className="container-app pb-10">
+        <PageHeader title="Choose a listing plan" subtitle={activeSub ? 'You’ve used all the listings on your current plan. Upgrade or renew to post more.' : 'Subscribe to a plan to start posting properties. Each plan includes a set number of listings.'} />
+        <div className="mb-4 flex items-start gap-2 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-800">
+          <ShieldCheck className="h-5 w-5 shrink-0" /> Paid plans keep listings genuine — every poster is a verified, paying landlord or agent.
+        </div>
+        <PlanPicker />
       </div>
     )
   }
@@ -71,6 +87,16 @@ export default function AddListing() {
   return (
     <div className="container-app pb-10">
       <PageHeader title="List a property" subtitle="Verified listings get a trust badge after field inspection" />
+
+      {activeSub && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-brand-800">
+            <CheckIcon className="h-4 w-4" />
+            <span><span className="font-semibold capitalize">{planByTier(activeSub.tier).name}</span> plan · <span className="font-semibold">{remaining >= 999 ? 'Unlimited' : remaining}</span> listing{remaining !== 1 ? 's' : ''} left</span>
+          </div>
+          <span className="text-xs text-brand-700/70">Renews {new Date(activeSub.expiresAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}</span>
+        </div>
+      )}
 
       <form onSubmit={submit} className="space-y-5">
         {/* Photos */}
